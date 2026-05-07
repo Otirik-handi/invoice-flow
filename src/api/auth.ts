@@ -16,6 +16,7 @@ import {
   serverTimestamp,
   Timestamp,
 } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
 
 async function registerUser(
   email: string,
@@ -67,10 +68,20 @@ async function logoutUser(): Promise<void> {
   await signOut(auth);
 }
 
-async function getCurrentUser(uid: string): Promise<User | null> {
-  const userSnap = await getDoc(doc(db, 'user', uid));
+async function fetchUserDoc(uid: string): Promise<User | null> {
+  const userSnap = await getDoc(doc(db, 'users', uid));
   if (!userSnap.exists()) return null;
   return userSnap.data() as User;
 }
 
-export { registerUser, loginUser, logoutUser, getCurrentUser };
+/** 返回当前 Firebase Auth 用户（等待 auth 状态恢复），用于路由守卫等场景 */
+function getCurrentUser(): Promise<{ uid: string } | null> {
+  return new Promise((resolve) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      unsubscribe();
+      resolve(user ? { uid: user.uid } : null);
+    });
+  });
+}
+
+export { registerUser, loginUser, logoutUser, fetchUserDoc, getCurrentUser };

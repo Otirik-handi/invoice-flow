@@ -13,7 +13,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import type { Invoice } from '../types';
+import type { Invoice, CreateInvoicePayload } from '../types';
 
 function generateInvoiceNumber(): string {
   const now = new Date();
@@ -39,7 +39,7 @@ export async function fetchInvoiceById(id: string): Promise<Invoice | null> {
 }
 
 export async function createInvoice(
-  data: Omit<Invoice, 'id' | 'createdAt' | 'updatedAt'>,
+  data: CreateInvoicePayload,
 ): Promise<string> {
   const items = data.items.map((item) => ({
     ...item,
