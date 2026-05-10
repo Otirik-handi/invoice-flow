@@ -8,6 +8,7 @@ import InvoiceFormView from '../views/invoice/InvoiceFormView.vue';
 import DashboardView from '../views/DashboardView.vue';
 import ClientsView from '../views/ClientsView.vue';
 import SettingsView from '../views/SettingsView.vue';
+import AppLayout from '../components/layout/AppLayout.vue';
 
 const routes = [
   {
@@ -27,46 +28,46 @@ const routes = [
     meta: { guestOnly: true },
   },
   {
-    path: '/invoices',
-    name: 'InvoiceList',
-    component: InvoiceListView,
-    meta: { requiresAuth: true },
-  },
-  {
-    path: '/invoices/new',
-    name: 'InvoiceCreate',
-    component: InvoiceFormView,
-    meta: { requiresAuth: true },
-  },
-  {
-    path: '/invoices/:id',
-    name: 'InvoiceDetail',
-    component: InvoiceDetailView,
-    meta: { requiresAuth: true },
-  },
-  {
-    path: '/invoices/:id/edit',
-    name: 'InvoiceEdit',
-    component: InvoiceFormView,
-    meta: { requiresAuth: true },
-  },
-  {
-    path: '/dashboard',
-    name: 'Dashboard',
-    component: DashboardView,
-    meta: { requiresAuth: true },
-  },
-  {
-    path: '/clients',
-    name: 'Clients',
-    component: ClientsView,
-    meta: { requiresAuth: true },
-  },
-  {
-    path: '/settings',
-    name: 'Settings',
-    component: SettingsView,
-    meta: { requiresAuth: true },
+    path: '/',
+    component: AppLayout,
+    meta: { requireAuth: true },
+    children: [
+      {
+        path: '/invoices',
+        name: 'InvoiceList',
+        component: InvoiceListView,
+      },
+      {
+        path: '/invoices/new',
+        name: 'InvoiceCreate',
+        component: InvoiceFormView,
+      },
+      {
+        path: '/invoices/:id',
+        name: 'InvoiceDetail',
+        component: InvoiceDetailView,
+      },
+      {
+        path: '/invoices/:id/edit',
+        name: 'InvoiceEdit',
+        component: InvoiceFormView,
+      },
+      {
+        path: '/dashboard',
+        name: 'Dashboard',
+        component: DashboardView,
+      },
+      {
+        path: '/clients',
+        name: 'Clients',
+        component: ClientsView,
+      },
+      {
+        path: '/settings',
+        name: 'Settings',
+        component: SettingsView,
+      },
+    ],
   },
 ];
 

@@ -1,3 +1,26 @@
 <template>
-  <router-view />
+  <n-config-provider>
+    <n-loading-bar-provider>
+      <n-message-provider>
+        <n-notification-provider>
+          <n-modal-provider>
+            <n-dialog-provider>
+              <router-view />
+            </n-dialog-provider>
+          </n-modal-provider>
+        </n-notification-provider>
+      </n-message-provider>
+    </n-loading-bar-provider>
+  </n-config-provider>
 </template>
+
+<script>
+import {
+  NConfigProvider,
+  NLoadingBarProvider,
+  NMessageProvider,
+  NNotificationProvider,
+  NModalProvider,
+  NDialogProvider
+} from 'naive-ui';
+</script>
