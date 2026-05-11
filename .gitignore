@@ -26,3 +26,6 @@ dist-ssr
 # Claude AI
 .claude/
 CLAUD.md
+
+# Project docs
+docs/
