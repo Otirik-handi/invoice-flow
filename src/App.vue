@@ -14,13 +14,13 @@
   </n-config-provider>
 </template>
 
-<script>
+<script setup lang="ts">
 import {
   NConfigProvider,
   NLoadingBarProvider,
   NMessageProvider,
   NNotificationProvider,
   NModalProvider,
-  NDialogProvider
+  NDialogProvider,
 } from 'naive-ui';
 </script>
