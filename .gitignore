@@ -27,5 +27,10 @@ dist-ssr
 .claude/
 CLAUD.md
 
+# Environment variables
+.env
+.env.local
+.env.*.local
+
 # Project docs
 docs/
