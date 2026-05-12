@@ -76,8 +76,7 @@ export const useInvoiceStore = defineStore('invoice', () => {
       const q = searchQuery.value.toLowerCase();
       list = list.filter(
         (inv) =>
-          inv.client.name.toLowerCase().includes(q) ||
-          inv.invoiceNumber.toLowerCase().includes(q),
+          inv.client.name.toLowerCase().includes(q) || inv.invoiceNumber.toLowerCase().includes(q),
       );
     }
 
@@ -86,9 +85,7 @@ export const useInvoiceStore = defineStore('invoice', () => {
     list = [...list].sort((a, b) => {
       const aVal = a[field]?.toString() ?? '';
       const bVal = b[field]?.toString() ?? '';
-      return order === 'asc'
-        ? aVal.localeCompare(bVal)
-        : bVal.localeCompare(aVal);
+      return order === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
     });
 
     return list;

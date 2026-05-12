@@ -38,9 +38,7 @@ export async function fetchInvoiceById(id: string): Promise<Invoice | null> {
   return { id: docSnap.id, ...docSnap.data() } as Invoice;
 }
 
-export async function createInvoice(
-  data: CreateInvoicePayload,
-): Promise<string> {
+export async function createInvoice(data: CreateInvoicePayload): Promise<string> {
   const items = data.items.map((item) => ({
     ...item,
     total: item.quantity * item.unitPrice,
@@ -63,10 +61,7 @@ export async function createInvoice(
   return docRef.id;
 }
 
-export async function updateInvoice(
-  id: string,
-  data: Partial<Invoice>,
-): Promise<void> {
+export async function updateInvoice(id: string, data: Partial<Invoice>): Promise<void> {
   const updateData: Record<string, unknown> = {
     ...data,
     updatedAt: serverTimestamp(),
@@ -105,9 +100,7 @@ export function subscribeInvoices(
   );
 
   const unsubscribe = onSnapshot(q, (snapshot) => {
-    const invoices = snapshot.docs.map(
-      (doc) => ({ id: doc.id, ...doc.data() }) as Invoice,
-    );
+    const invoices = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Invoice);
     callback(invoices);
   });
 

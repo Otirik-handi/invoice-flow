@@ -45,7 +45,7 @@ export interface InvoiceClient {
 }
 
 export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue';
-export type CreateInvoicePayload = Omit<Invoice, 'id' | 'createdAt' | 'updatedAt'>
+export type CreateInvoicePayload = Omit<Invoice, 'id' | 'createdAt' | 'updatedAt'>;
 
 export interface Client {
   id: string; // Firestore 文档ID
