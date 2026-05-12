@@ -42,33 +42,61 @@
 
     <!-- 右侧面板 -->
     <n-flex class="right-panel" justify="center" align="center">
-      <n-form class="form-card">
+      <n-form class="form-card" @submit.prevent="handleLogin">
         <n-flex class="title-row">
           <h1 class="form-title">欢迎回来</h1>
           <h3 class="form-subtitle">登录以管理您的发票与客户</h3>
         </n-flex>
-        <n-form-item label="邮箱">
-          <n-input placeholder="请输入邮箱" size="large">
+
+        <n-alert v-if="errorMsg" type="error" closable @close="errorMsg = ''" :bordered="false">
+          {{ errorMsg }}
+        </n-alert>
+
+        <n-form-item label="邮箱" :feedback="emailError">
+          <n-input
+            v-model:value="email"
+            placeholder="请输入邮箱"
+            size="large"
+            :disabled="loading"
+            @keyup.enter="handleLogin"
+          >
             <template #prefix>
               <n-icon :component="UserOutlined"></n-icon>
             </template>
           </n-input>
         </n-form-item>
-        <n-form-item label="密码">
-          <n-input placeholder="请输入密码" size="large" type="password" show-password-on="click">
+        <n-form-item label="密码" :feedback="passwordError">
+          <n-input
+            v-model:value="password"
+            placeholder="请输入密码"
+            size="large"
+            type="password"
+            show-password-on="click"
+            :disabled="loading"
+            @keyup.enter="handleLogin"
+          >
             <template #prefix>
               <n-icon :component="LockOutlined"></n-icon>
             </template>
           </n-input>
         </n-form-item>
         <n-flex class="ops-row" justify="space-between" align="start">
-          <n-checkbox>记住我</n-checkbox>
+          <n-checkbox v-model:checked="remember">记住我</n-checkbox>
           <a href="#">忘记密码?</a>
         </n-flex>
-        <n-button size="large" color="#4f46e5">登录</n-button>
+        <n-button
+          size="large"
+          color="#4f46e5"
+          :loading="loading"
+          :disabled="loading"
+          attr-type="submit"
+        >
+          {{ loading ? '登录中…' : '登录' }}
+        </n-button>
         <n-divider></n-divider>
         <n-flex class="regist-row" justify="center">
-          还没有账户？<router-link to="Register">去注册</router-link>
+          还没有账户？
+          <router-link to="/register">去注册</router-link>
         </n-flex>
       </n-form>
     </n-flex>
@@ -76,6 +104,9 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { useAuthStore } from '../../stores/authStore';
 import {
   NFlex,
   NForm,
@@ -86,7 +117,8 @@ import {
   NListItem,
   NDivider,
   NButton,
-  NCheckbox
+  NCheckbox,
+  NAlert,
 } from 'naive-ui';
 import {
   AccountBookOutlined,
@@ -94,8 +126,64 @@ import {
   CloudSyncOutlined,
   CheckCircleTwotone,
   UserOutlined,
-  LockOutlined
-} from "@vicons/antd"
+  LockOutlined,
+} from '@vicons/antd';
+
+const router = useRouter();
+const authStore = useAuthStore();
+
+const email = ref('');
+const password = ref('');
+const remember = ref(false);
+const loading = ref(false);
+const errorMsg = ref('');
+
+const emailError = ref('');
+const passwordError = ref('');
+
+function validate(): boolean {
+  let valid = true;
+  emailError.value = '';
+  passwordError.value = '';
+
+  if (!email.value.trim()) {
+    emailError.value = '请输入邮箱';
+    valid = false;
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) {
+    emailError.value = '邮箱格式不正确';
+    valid = false;
+  }
+  if (!password.value) {
+    passwordError.value = '请输入密码';
+    valid = false;
+  }
+  return valid;
+}
+
+async function handleLogin() {
+  if (!validate()) return;
+
+  loading.value = true;
+  errorMsg.value = '';
+  try {
+    await authStore.login(email.value.trim(), password.value);
+    router.push('/invoices');
+  } catch (e: unknown) {
+    const err = e as { code?: string; message?: string };
+    const code = err.code;
+    if (code === 'auth/user-not-found' || code === 'auth/invalid-credential') {
+      errorMsg.value = '邮箱或密码错误';
+    } else if (code === 'auth/invalid-email') {
+      errorMsg.value = '邮箱格式无效';
+    } else if (code === 'auth/too-many-requests') {
+      errorMsg.value = '登录尝试次数过多，请稍后再试';
+    } else {
+      errorMsg.value = err.message || '登录失败，请稍后重试';
+    }
+  } finally {
+    loading.value = false;
+  }
+}
 </script>
 
 <style>
@@ -189,7 +277,7 @@ import {
   padding: 4rem;
 }
 
-.right-panel .form-card>* {
+.right-panel .form-card > * {
   width: 100%;
 }
 

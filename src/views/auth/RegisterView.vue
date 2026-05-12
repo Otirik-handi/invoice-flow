@@ -11,68 +11,116 @@
       <n-list class="steps-list" :show-divider="false">
         <n-list-item class="step">
           <div class="order">1</div>
-          <p>填写信息<n-divider :vertical="true"></n-divider>设置邮箱与密码</p>
+          <p>
+            填写信息
+            <n-divider :vertical="true"></n-divider>
+            设置邮箱与密码
+          </p>
         </n-list-item>
         <n-list-item class="step">
           <div class="order">2</div>
-          <p>完善资料<n-divider :vertical="true"></n-divider>填写显示名称</p>
+          <p>
+            完善资料
+            <n-divider :vertical="true"></n-divider>
+            填写显示名称
+          </p>
         </n-list-item>
         <n-list-item class="step">
           <div class="order">3</div>
-          <p>开始使用<n-divider :vertical="true"></n-divider>管理发票与客户</p>
+          <p>
+            开始使用
+            <n-divider :vertical="true"></n-divider>
+            管理发票与客户
+          </p>
         </n-list-item>
       </n-list>
-      <n-flex class="trial-badge" align="center" justify="center">
-        免费注册，无需绑定信用卡
-      </n-flex>
+      <n-flex class="trial-badge" align="center" justify="center">免费注册，无需绑定信用卡</n-flex>
     </n-flex>
     <!-- 右侧面板 -->
     <n-flex class="right-panel" justify="center" align="center">
-      <n-form class="reg-card">
+      <n-form class="reg-card" @submit.prevent="handleRegister">
         <n-flex class="title-row">
           <h1 class="form-title">创建新账户</h1>
           <h3 class="form-subtitle">填写以下信息，快速完成注册</h3>
         </n-flex>
-        <n-form-item label="邮箱">
-          <n-input placeholder="请输入邮箱" size="large">
+
+        <n-alert v-if="errorMsg" type="error" closable @close="errorMsg = ''" :bordered="false">
+          {{ errorMsg }}
+        </n-alert>
+
+        <n-form-item label="邮箱" :feedback="emailError">
+          <n-input
+            v-model:value="email"
+            placeholder="请输入邮箱"
+            size="large"
+            :disabled="loading"
+          >
             <template #prefix>
               <n-icon :component="UserOutlined"></n-icon>
             </template>
           </n-input>
         </n-form-item>
-        <n-form-item label="名称">
-          <n-input placeholder="请输入您的名称" size="large">
+        <n-form-item label="名称" :feedback="nameError">
+          <n-input
+            v-model:value="displayName"
+            placeholder="请输入您的名称"
+            size="large"
+            :disabled="loading"
+          >
             <template #prefix>
               <n-icon :component="UserOutlined"></n-icon>
             </template>
           </n-input>
         </n-form-item>
         <n-flex justify="center" align="center">
-          <n-form-item label="设置密码" class="flex-grow-1">
-            <n-input placeholder="至少8位字符" size="large" type="password" show-password-on="click">
+          <n-form-item label="设置密码" class="flex-grow-1" :feedback="passwordError">
+            <n-input
+              v-model:value="password"
+              placeholder="至少8位字符"
+              size="large"
+              type="password"
+              show-password-on="click"
+              :disabled="loading"
+            >
               <template #prefix>
                 <n-icon :component="LockOutlined"></n-icon>
               </template>
             </n-input>
           </n-form-item>
-          <n-form-item label="确认密码" class="flex-grow-1">
-            <n-input placeholder="再次输入密码" size="large" type="password" show-password-on="click">
+          <n-form-item label="确认密码" class="flex-grow-1" :feedback="confirmError">
+            <n-input
+              v-model:value="confirmPassword"
+              placeholder="再次输入密码"
+              size="large"
+              type="password"
+              show-password-on="click"
+              :disabled="loading"
+            >
               <template #prefix>
                 <n-icon :component="LockOutlined"></n-icon>
               </template>
             </n-input>
           </n-form-item>
         </n-flex>
-        <n-checkbox class="argee-row">我已阅读并同意《服务协议》和《隐私政策》</n-checkbox>
-        <n-button size="large" color="#4f46e5">
+        <n-checkbox v-model:checked="agreed" class="argee-row"
+          >我已阅读并同意《服务协议》和《隐私政策》</n-checkbox
+        >
+        <n-button
+          size="large"
+          color="#4f46e5"
+          :loading="loading"
+          :disabled="loading"
+          attr-type="submit"
+        >
           <template #icon>
             <n-icon :component="UserAddOutlined"></n-icon>
           </template>
-          注册
+          {{ loading ? '注册中…' : '注册' }}
         </n-button>
         <n-divider></n-divider>
         <n-flex class="login-row" justify="center">
-          已有账户？<router-link to="Login">去登录</router-link>
+          已有账户？
+          <router-link to="/login">去登录</router-link>
         </n-flex>
       </n-form>
     </n-flex>
@@ -80,6 +128,9 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { useAuthStore } from '../../stores/authStore';
 import {
   NFlex,
   NForm,
@@ -90,15 +141,90 @@ import {
   NListItem,
   NDivider,
   NButton,
-  NCheckbox
-} from 'naive-ui'
-import {
-  AccountBookOutlined,
-  UserOutlined,
-  LockOutlined,
-  UserAddOutlined
-} from "@vicons/antd"
-import { RouterLink } from 'vue-router';
+  NCheckbox,
+  NAlert,
+} from 'naive-ui';
+import { AccountBookOutlined, UserOutlined, LockOutlined, UserAddOutlined } from '@vicons/antd';
+
+const router = useRouter();
+const authStore = useAuthStore();
+
+const email = ref('');
+const displayName = ref('');
+const password = ref('');
+const confirmPassword = ref('');
+const agreed = ref(false);
+const loading = ref(false);
+const errorMsg = ref('');
+
+const emailError = ref('');
+const nameError = ref('');
+const passwordError = ref('');
+const confirmError = ref('');
+
+function validate(): boolean {
+  let valid = true;
+  emailError.value = '';
+  nameError.value = '';
+  passwordError.value = '';
+  confirmError.value = '';
+
+  if (!email.value.trim()) {
+    emailError.value = '请输入邮箱';
+    valid = false;
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) {
+    emailError.value = '邮箱格式不正确';
+    valid = false;
+  }
+  if (!displayName.value.trim()) {
+    nameError.value = '请输入名称';
+    valid = false;
+  }
+  if (!password.value) {
+    passwordError.value = '请设置密码';
+    valid = false;
+  } else if (password.value.length < 8) {
+    passwordError.value = '密码至少8位字符';
+    valid = false;
+  }
+  if (!confirmPassword.value) {
+    confirmError.value = '请确认密码';
+    valid = false;
+  } else if (password.value !== confirmPassword.value) {
+    confirmError.value = '两次密码输入不一致';
+    valid = false;
+  }
+  if (!agreed.value) {
+    errorMsg.value = '请阅读并同意服务协议和隐私政策';
+    valid = false;
+  }
+  return valid;
+}
+
+async function handleRegister() {
+  errorMsg.value = '';
+  if (!validate()) return;
+
+  loading.value = true;
+  try {
+    await authStore.register(email.value.trim(), password.value, displayName.value.trim());
+    router.push('/invoices');
+  } catch (e: unknown) {
+    const err = e as { code?: string; message?: string };
+    const code = err.code;
+    if (code === 'auth/email-already-in-use') {
+      errorMsg.value = '该邮箱已被注册';
+    } else if (code === 'auth/weak-password') {
+      errorMsg.value = '密码强度不足，至少需要8位字符';
+    } else if (code === 'auth/invalid-email') {
+      errorMsg.value = '邮箱格式无效';
+    } else {
+      errorMsg.value = err.message || '注册失败，请稍后重试';
+    }
+  } finally {
+    loading.value = false;
+  }
+}
 </script>
 
 <style>
@@ -203,7 +329,7 @@ import { RouterLink } from 'vue-router';
   padding: 44px 48px;
 }
 
-.reg-card>* {
+.reg-card > * {
   width: 100%;
 }
 
