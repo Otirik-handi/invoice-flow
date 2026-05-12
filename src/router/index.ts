@@ -76,17 +76,23 @@ const router = createRouter({
   routes,
 });
 
-router.beforeEach(async (to, from, next) => {
-  const user = await getCurrentUser();
-  const requiresAuth = to.matched.some((r) => r.meta.requiresAuth);
+router.beforeEach(async (to) => {
+  let user;
+  try {
+    user = await getCurrentUser();
+  } catch (e) {
+    console.warn('Auth guard: getCurrentUser failed', e);
+    user = null;
+  }
+
+  const requiresAuth = to.matched.some((r) => r.meta.requireAuth);
   const guestOnly = to.matched.some((r) => r.meta.guestOnly);
 
   if (requiresAuth && !user) {
-    next({ name: 'Login' });
-  } else if (guestOnly && user) {
-    next({ name: 'InvoiceList' });
-  } else {
-    next();
+    return { name: 'Login' };
+  }
+  if (guestOnly && user) {
+    return { name: 'InvoiceList' };
   }
 });
 

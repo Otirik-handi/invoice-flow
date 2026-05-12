@@ -4,18 +4,8 @@
 
 import { type User } from '../types';
 import { auth, db } from './firebase';
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
-} from 'firebase/auth';
-import {
-  doc,
-  getDoc,
-  setDoc,
-  serverTimestamp,
-  Timestamp,
-} from 'firebase/firestore';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { doc, getDoc, setDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 
 async function registerUser(
@@ -23,11 +13,7 @@ async function registerUser(
   password: string,
   displayName: string,
 ): Promise<User | null> {
-  const userCredential = await createUserWithEmailAndPassword(
-    auth,
-    email,
-    password,
-  );
+  const userCredential = await createUserWithEmailAndPassword(auth, email, password);
   const { uid } = userCredential.user;
 
   const userData: User = {
@@ -49,11 +35,7 @@ async function registerUser(
 }
 
 async function loginUser(email: string, password: string): Promise<User> {
-  const userCredential = await signInWithEmailAndPassword(
-    auth,
-    email,
-    password,
-  );
+  const userCredential = await signInWithEmailAndPassword(auth, email, password);
   const { uid } = userCredential.user;
 
   const userSnap = await getDoc(doc(db, 'users', uid));
@@ -77,7 +59,12 @@ async function fetchUserDoc(uid: string): Promise<User | null> {
 /** 返回当前 Firebase Auth 用户（等待 auth 状态恢复），用于路由守卫等场景 */
 function getCurrentUser(): Promise<{ uid: string } | null> {
   return new Promise((resolve) => {
+    const timeout = setTimeout(() => {
+      resolve(null);
+    }, 5000);
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
+      clearTimeout(timeout);
       unsubscribe();
       resolve(user ? { uid: user.uid } : null);
     });
