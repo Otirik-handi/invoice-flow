@@ -9,33 +9,30 @@
       show-trigger
       @collapse="collapsed = true"
       @expand="collapsed = false"
+      class="app-sider"
     >
       <div class="sidebar-header">
         <n-icon class="sidebar-logo" :component="AccountBookOutlined" size="28" />
         <span v-show="!collapsed" class="sidebar-title">InvoiceFlow</span>
       </div>
       <n-divider style="margin: 0" />
-      <n-menu
-        :collapsed="collapsed"
-        :collapsed-width="64"
-        :collapsed-icon-size="22"
-        :options="menuOptions"
-        :value="activeKey"
-        @update:value="handleMenuSelect"
-      />
-      <template #footer>
-        <div class="sidebar-footer">
-          <n-divider style="margin: 0" />
-          <n-menu
-            :collapsed="collapsed"
-            :collapsed-width="64"
-            :collapsed-icon-size="22"
-            :options="footerMenuOptions"
-            :value="activeKey"
-            @update:value="handleMenuSelect"
-          />
+      <div class="sidebar-menu-area">
+        <n-menu
+          :collapsed="collapsed"
+          :collapsed-width="64"
+          :collapsed-icon-size="22"
+          :options="menuOptions"
+          :value="activeKey"
+          @update:value="handleMenuSelect"
+        />
+      </div>
+      <div class="sidebar-footer">
+        <n-divider style="margin: 0" />
+        <div class="logout-item" :class="{ collapsed }" @click="handleMenuSelect('logout')">
+          <n-icon :component="LogoutOutlined" size="18" />
+          <span v-show="!collapsed">退出登录</span>
         </div>
-      </template>
+      </div>
     </n-layout-sider>
     <n-layout>
       <n-layout-header class="navbar">
@@ -97,10 +94,6 @@ const menuOptions: MenuOption[] = [
   { label: '设置', key: '/settings', icon: renderIcon(SettingOutlined) },
 ];
 
-const footerMenuOptions: MenuOption[] = [
-  { label: '退出登录', key: 'logout', icon: renderIcon(LogoutOutlined) },
-];
-
 const activeKey = computed(() => {
   const path = route.path;
   if (path.startsWith('/invoices')) return '/invoices';
@@ -151,9 +144,40 @@ function handleMenuSelect(key: string) {
 }
 
 .sidebar-footer {
-  position: absolute;
-  bottom: 0;
-  width: 100%;
+  border-top: 1px solid var(--color-border, #e5e7eb);
+}
+
+.logout-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--color-text-secondary, #6b7280);
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+}
+
+.logout-item:hover {
+  background-color: var(--color-primary-lighter, rgba(79, 70, 229, 0.08));
+  color: var(--color-error, #dc2626);
+}
+
+.logout-item.collapsed {
+  justify-content: center;
+  padding: 12px 0;
+}
+
+.sidebar-menu-area {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.app-sider {
+  display: flex;
+  flex-direction: column;
 }
 
 .navbar {
