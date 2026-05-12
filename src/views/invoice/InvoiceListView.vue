@@ -16,14 +16,16 @@
           <n-button
             v-for="tab in statusTabs"
             :key="tab.key"
-            :type="tab.key === activeTab ? 'primary' : 'default'"
+            :type="store.statusFilter === tab.key ? 'primary' : 'default'"
             size="small"
+            @click="store.statusFilter = tab.key"
           >
             {{ tab.label }}
           </n-button>
         </n-button-group>
 
         <n-input
+          v-model:value="store.searchQuery"
           :style="{ width: '240px' }"
           placeholder="搜索发票编号或客户名称…"
           clearable
@@ -35,22 +37,28 @@
         </n-input>
       </div>
 
-      <n-data-table
-        :columns="columns"
-        :data="mockData"
-        :bordered="false"
-        :single-line="false"
-        size="medium"
-      />
+      <n-spin :show="store.loading">
+        <n-data-table
+          v-if="store.filteredInvoices.length > 0"
+          :columns="columns"
+          :data="store.filteredInvoices"
+          :bordered="false"
+          :single-line="false"
+          size="medium"
+          :row-key="(row: any) => row.id"
+        />
+        <n-empty v-else description="暂无发票" style="padding: 60px 0" />
+      </n-spin>
     </n-space>
   </div>
 </template>
 
 <script setup lang="ts">
-import { h } from 'vue';
+import { h, onMounted, onUnmounted } from 'vue';
 import type { Component } from 'vue';
 import { useRouter } from 'vue-router';
-import { NButton, NButtonGroup, NDataTable, NIcon, NInput, NSpace, NTag } from 'naive-ui';
+import { useDialog } from 'naive-ui';
+import { NButton, NButtonGroup, NDataTable, NIcon, NInput, NSpace, NTag, NSpin, NEmpty } from 'naive-ui';
 import type { DataTableColumns } from 'naive-ui';
 import {
   PlusOutlined,
@@ -59,23 +67,37 @@ import {
   EditOutlined,
   DeleteOutlined,
 } from '@vicons/antd';
-
-const statusTabs = [
-  { label: '全部', key: 'all' },
-  { label: '草稿', key: 'draft' },
-  { label: '已发送', key: 'sent' },
-  { label: '已付款', key: 'paid' },
-  { label: '已逾期', key: 'overdue' },
-];
+import { useInvoiceStore } from '../../stores/invoiceStore';
+import { getCurrentUser } from '../../api/auth';
+import type { Invoice } from '../../types';
+import { format } from 'date-fns';
 
 const router = useRouter();
-const activeTab = 'all';
+const dialog = useDialog();
+const store = useInvoiceStore();
+
+const statusTabs = [
+  { label: '全部', key: 'all' as const },
+  { label: '草稿', key: 'draft' as const },
+  { label: '已发送', key: 'sent' as const },
+  { label: '已付款', key: 'paid' as const },
+  { label: '已逾期', key: 'overdue' as const },
+];
+
+onMounted(async () => {
+  const fbUser = await getCurrentUser();
+  if (fbUser) store.startListening(fbUser.uid);
+});
+
+onUnmounted(() => {
+  store.stopListening();
+});
 
 function renderIcon(icon: Component) {
   return () => h(NIcon, null, { default: () => h(icon) });
 }
 
-const statusMap: Record<string, { label: string; type: 'default' | 'info' | 'success' | 'error' }> =
+const statusMap: Record<string, { label: string; type: 'default' | 'info' | 'success' | 'error' | 'warning' }> =
   {
     draft: { label: '草稿', type: 'default' },
     sent: { label: '已发送', type: 'info' },
@@ -83,7 +105,24 @@ const statusMap: Record<string, { label: string; type: 'default' | 'info' | 'suc
     overdue: { label: '已逾期', type: 'error' },
   };
 
-const columns: DataTableColumns<MockInvoice> = [
+const currencySymbol: Record<string, string> = {
+  CNY: '¥',
+  USD: '$',
+  EUR: '€',
+};
+
+function formatMoney(amount: number, currency: string): string {
+  const symbol = currencySymbol[currency] || currency;
+  return `${symbol} ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function formatTs(ts: unknown): string {
+  if (!ts) return '-';
+  const date = (ts as { toDate?: () => Date }).toDate?.();
+  return date ? format(date, 'yyyy-MM-dd') : '-';
+}
+
+const columns: DataTableColumns<Invoice> = [
   {
     title: '发票编号',
     key: 'invoiceNumber',
@@ -91,14 +130,20 @@ const columns: DataTableColumns<MockInvoice> = [
   },
   {
     title: '客户名称',
-    key: 'clientName',
+    key: 'client.name',
     width: 140,
+    render(row) {
+      return row.client?.name || '-';
+    },
   },
   {
     title: '金额',
-    key: 'amount',
-    width: 120,
+    key: 'total',
+    width: 130,
     align: 'right',
+    render(row) {
+      return formatMoney(row.total, row.currency);
+    },
   },
   {
     title: '状态',
@@ -113,11 +158,17 @@ const columns: DataTableColumns<MockInvoice> = [
     title: '到期日期',
     key: 'dueDate',
     width: 120,
+    render(row) {
+      return formatTs(row.dueDate);
+    },
   },
   {
     title: '创建日期',
     key: 'createdAt',
     width: 120,
+    render(row) {
+      return formatTs(row.createdAt);
+    },
   },
   {
     title: '操作',
@@ -127,106 +178,45 @@ const columns: DataTableColumns<MockInvoice> = [
       return h('div', { style: 'display: flex; gap: 8px; align-items: center;' }, [
         h(
           NButton,
-          { text: true, size: 'small', type: 'primary', onClick: () => router.push(`/invoices/${row.id}`) },
+          {
+            text: true,
+            size: 'small',
+            type: 'primary',
+            onClick: () => router.push(`/invoices/${row.id}`),
+          },
           { default: () => h(NIcon, null, { default: () => h(EyeOutlined) }) },
         ),
         h(
           NButton,
-          { text: true, size: 'small', type: 'primary', onClick: () => router.push(`/invoices/${row.id}/edit`) },
+          {
+            text: true,
+            size: 'small',
+            type: 'primary',
+            onClick: () => router.push(`/invoices/${row.id}/edit`),
+          },
           { default: () => h(NIcon, null, { default: () => h(EditOutlined) }) },
         ),
         h(
           NButton,
-          { text: true, size: 'small', type: 'error' },
+          {
+            text: true,
+            size: 'small',
+            type: 'error',
+            onClick: () =>
+              dialog.warning({
+                title: '确认删除',
+                content: `确定要删除发票 ${row.invoiceNumber} 吗？此操作不可撤销。`,
+                positiveText: '删除',
+                negativeText: '取消',
+                onPositiveClick: async () => {
+                  await store.deleteInvoice(row.id);
+                },
+              }),
+          },
           { default: () => h(NIcon, null, { default: () => h(DeleteOutlined) }) },
         ),
       ]);
     },
-  },
-];
-
-interface MockInvoice {
-  id: string;
-  invoiceNumber: string;
-  clientName: string;
-  amount: string;
-  status: string;
-  dueDate: string;
-  createdAt: string;
-}
-
-const mockData: MockInvoice[] = [
-  {
-    id: '1',
-    invoiceNumber: 'INV-20260511-3829',
-    clientName: '张三设计工作室',
-    amount: '¥ 12,500.00',
-    status: 'sent',
-    dueDate: '2026-06-10',
-    createdAt: '2026-05-11',
-  },
-  {
-    id: '2',
-    invoiceNumber: 'INV-20260510-1745',
-    clientName: '李四科技公司',
-    amount: '¥ 8,200.00',
-    status: 'paid',
-    dueDate: '2026-06-09',
-    createdAt: '2026-05-10',
-  },
-  {
-    id: '3',
-    invoiceNumber: 'INV-20260509-6532',
-    clientName: '王五咨询',
-    amount: '¥ 3,600.00',
-    status: 'draft',
-    dueDate: '2026-06-08',
-    createdAt: '2026-05-09',
-  },
-  {
-    id: '4',
-    invoiceNumber: 'INV-20260507-8210',
-    clientName: '赵六贸易',
-    amount: '¥ 25,000.00',
-    status: 'overdue',
-    dueDate: '2026-05-07',
-    createdAt: '2026-05-07',
-  },
-  {
-    id: '5',
-    invoiceNumber: 'INV-20260505-4471',
-    clientName: '陈七传媒',
-    amount: '¥ 6,750.00',
-    status: 'sent',
-    dueDate: '2026-06-04',
-    createdAt: '2026-05-05',
-  },
-  {
-    id: '6',
-    invoiceNumber: 'INV-20260503-9903',
-    clientName: '孙八建筑',
-    amount: '¥ 42,000.00',
-    status: 'paid',
-    dueDate: '2026-06-02',
-    createdAt: '2026-05-03',
-  },
-  {
-    id: '7',
-    invoiceNumber: 'INV-20260428-2658',
-    clientName: '周九教育',
-    amount: '¥ 9,800.00',
-    status: 'draft',
-    dueDate: '2026-05-28',
-    createdAt: '2026-04-28',
-  },
-  {
-    id: '8',
-    invoiceNumber: 'INV-20260425-5317',
-    clientName: '吴十物流',
-    amount: '¥ 15,300.00',
-    status: 'overdue',
-    dueDate: '2026-04-25',
-    createdAt: '2026-04-25',
   },
 ];
 </script>
