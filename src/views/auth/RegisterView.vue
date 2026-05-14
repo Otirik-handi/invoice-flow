@@ -208,7 +208,7 @@ async function handleRegister() {
   loading.value = true;
   try {
     await authStore.register(email.value.trim(), password.value, displayName.value.trim());
-    router.push('/invoices');
+    router.push('/dashboard');
   } catch (e: unknown) {
     const err = e as { code?: string; message?: string };
     const code = err.code;
@@ -311,18 +311,6 @@ async function handleRegister() {
   background-color: rgba(255, 255, 255, 0.2);
   border-radius: var(--radius-md);
 }
-
-.right-panel-reg {
-  box-sizing: border-box;
-  flex-grow: 1;
-  height: 100%;
-  padding: 2.5rem 5rem;
-  background-color: #fff;
-  color: var(--color-text);
-  border-top-right-radius: var(--radius-xl);
-  border-bottom-right-radius: var(--radius-xl);
-}
-
 .reg-card {
   box-sizing: border-box;
   width: 30rem;

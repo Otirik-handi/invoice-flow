@@ -2,29 +2,48 @@ import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../api/firebase';
-import { registerUser, loginUser, logoutUser, fetchUserDoc } from '../api/auth';
+import { registerUser, loginUser, logoutUser, fetchUserDoc } from '../api';
 import type { User } from '../types';
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null);
   const loading = ref(true);
 
-  // 监听 Firebase Auth 状态变化
   let unsubscribe: (() => void) | null = null;
+  let _resolveReady: ((user: User | null) => void) | null = null;
+
+  /** 供 route guard 等待用户数据就绪 */
+  const _readyPromise = new Promise<User | null>((resolve) => {
+    _resolveReady = resolve;
+  });
 
   function init() {
+    if (unsubscribe) return;
     unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        user.value = await fetchUserDoc(firebaseUser.uid);
-      } else {
+      try {
+        if (firebaseUser) {
+          user.value = await fetchUserDoc(firebaseUser.uid);
+        } else {
+          user.value = null;
+        }
+      } catch (e) {
+        console.error('Failed to load user data', e);
         user.value = null;
+      } finally {
+        loading.value = false;
+        _resolveReady?.(user.value);
       }
-      loading.value = false;
     });
   }
 
   function cleanup() {
     unsubscribe?.();
+    unsubscribe = null;
+  }
+
+  async function waitForUser(): Promise<User | null> {
+    if (!loading.value) return user.value;
+    return _readyPromise;
   }
 
   async function login(email: string, password: string) {
@@ -42,5 +61,5 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null;
   }
 
-  return { user, loading, init, cleanup, login, register, logout };
+  return { user, loading, init, cleanup, waitForUser, login, register, logout };
 });

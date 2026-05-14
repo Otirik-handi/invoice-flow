@@ -1,5 +1,6 @@
 <template>
-  <n-layout has-sider class="layout-warpper">
+  <div v-if="authStore.loading" class="loading-screen">加载中...</div>
+  <n-layout v-else has-sider class="layout-warpper">
     <n-layout-sider
       bordered
       collapse-mode="width"
@@ -10,6 +11,7 @@
       @collapse="collapsed = true"
       @expand="collapsed = false"
       class="app-sider"
+      content-style="display: flex; flex-direction: column;"
     >
       <div class="sidebar-header">
         <n-icon class="sidebar-logo" :component="AccountBookOutlined" size="28" />
@@ -37,12 +39,15 @@
     <n-layout>
       <n-layout-header class="navbar">
         <div class="navbar-left">
-          <span class="navbar-title">页面标题</span>
+          <n-breadcrumb>
+            <n-breadcrumb-item v-for="item in breadcrumbItems" :key="item.label">
+              {{ item.label }}
+            </n-breadcrumb-item>
+          </n-breadcrumb>
         </div>
         <div class="navbar-right">
-          <n-avatar size="small" round class="navbar-avatar">U</n-avatar>
-          <span class="navbar-username">用户名</span>
-          <n-icon :component="DownOutlined" size="12" class="navbar-caret" />
+          <n-avatar size="small" round class="navbar-avatar">{{ avatarChar }}</n-avatar>
+          <span class="navbar-username">{{ user?.displayName || '用户' }}</span>
         </div>
       </n-layout-header>
       <n-layout-content>
@@ -56,6 +61,7 @@
 import { h, computed, ref } from 'vue';
 import type { Component } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import { useAuthStore } from '../../stores/authStore';
 import {
   NLayout,
   NLayoutContent,
@@ -65,6 +71,8 @@ import {
   NIcon,
   NDivider,
   NAvatar,
+  NBreadcrumb,
+  NBreadcrumbItem,
   useDialog,
 } from 'naive-ui';
 import type { MenuOption } from 'naive-ui';
@@ -75,21 +83,35 @@ import {
   TeamOutlined,
   SettingOutlined,
   LogoutOutlined,
-  DownOutlined,
 } from '@vicons/antd';
 
 const router = useRouter();
 const route = useRoute();
 const dialog = useDialog();
 const collapsed = ref(false);
+const authStore = useAuthStore();
+const user = authStore.user;
+const avatarChar = computed(() => user?.displayName?.charAt(0) || 'U');
+
+const breadcrumbItems = computed(() => {
+  const map: Record<string, string> = {
+    Dashboard: '仪表盘',
+    InvoiceList: '发票列表',
+    Clients: '客户管理',
+    Settings: '设置',
+  };
+  const label = map[route.name as string];
+  if (!label) return [{ label: '页面标题' }];
+  return [{ label: '发票管理' }, { label }];
+});
 
 function renderIcon(icon: Component) {
   return () => h(NIcon, null, { default: () => h(icon) });
 }
 
 const menuOptions: MenuOption[] = [
-  { label: '发票管理', key: '/invoices', icon: renderIcon(FileTextOutlined) },
   { label: '仪表盘', key: '/dashboard', icon: renderIcon(DashboardOutlined) },
+  { label: '发票管理', key: '/invoices', icon: renderIcon(FileTextOutlined) },
   { label: '客户管理', key: '/clients', icon: renderIcon(TeamOutlined) },
   { label: '设置', key: '/settings', icon: renderIcon(SettingOutlined) },
 ];
@@ -175,11 +197,6 @@ function handleMenuSelect(key: string) {
   overflow-y: auto;
 }
 
-.app-sider {
-  display: flex;
-  flex-direction: column;
-}
-
 .navbar {
   display: flex;
   align-items: center;
@@ -213,7 +230,12 @@ function handleMenuSelect(key: string) {
   color: var(--color-text, #1f2937);
 }
 
-.navbar-caret {
+.loading-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  font-size: 16px;
   color: var(--color-text-secondary, #6b7280);
 }
 </style>

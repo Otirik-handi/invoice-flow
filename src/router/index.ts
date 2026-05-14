@@ -1,10 +1,9 @@
 import { createWebHistory, createRouter } from 'vue-router';
-import { getCurrentUser } from '../api/auth';
+import { getCurrentUser } from '../api';
+import { useAuthStore } from '../stores/authStore';
 import LoginView from '../views/auth/LoginView.vue';
 import RegisterView from '../views/auth/RegisterView.vue';
 import InvoiceListView from '../views/invoice/InvoiceListView.vue';
-import InvoiceDetailView from '../views/invoice/InvoiceDetailView.vue';
-import InvoiceFormView from '../views/invoice/InvoiceFormView.vue';
 import DashboardView from '../views/DashboardView.vue';
 import ClientsView from '../views/ClientsView.vue';
 import SettingsView from '../views/SettingsView.vue';
@@ -13,7 +12,7 @@ import AppLayout from '../components/layout/AppLayout.vue';
 const routes = [
   {
     path: '/',
-    redirect: '/invoices',
+    redirect: '/dashboard',
   },
   {
     path: '/login',
@@ -39,18 +38,15 @@ const routes = [
       },
       {
         path: '/invoices/new',
-        name: 'InvoiceCreate',
-        component: InvoiceFormView,
+        redirect: '/invoices',
       },
       {
         path: '/invoices/:id',
-        name: 'InvoiceDetail',
-        component: InvoiceDetailView,
+        redirect: '/invoices',
       },
       {
         path: '/invoices/:id/edit',
-        name: 'InvoiceEdit',
-        component: InvoiceFormView,
+        redirect: '/invoices',
       },
       {
         path: '/dashboard',
@@ -77,22 +73,29 @@ const router = createRouter({
 });
 
 router.beforeEach(async (to) => {
-  let user;
+  let fbUser;
   try {
-    user = await getCurrentUser();
+    fbUser = await getCurrentUser();
   } catch (e) {
     console.warn('Auth guard: getCurrentUser failed', e);
-    user = null;
+    fbUser = null;
   }
 
   const requiresAuth = to.matched.some((r) => r.meta.requireAuth);
   const guestOnly = to.matched.some((r) => r.meta.guestOnly);
 
-  if (requiresAuth && !user) {
+  if (requiresAuth && !fbUser) {
     return { name: 'Login' };
   }
-  if (guestOnly && user) {
-    return { name: 'InvoiceList' };
+  if (guestOnly && fbUser) {
+    return { name: 'Dashboard' };
+  }
+
+  // 确认 auth 后，等待 Firestore 用户文档加载完成
+  if (fbUser) {
+    const authStore = useAuthStore();
+    authStore.init();
+    await authStore.waitForUser();
   }
 });
 

@@ -91,7 +91,8 @@ export async function deleteInvoice(id: string): Promise<void> {
 
 export function subscribeInvoices(
   userId: string,
-  callback: (invoices: Invoice[]) => void,
+  onNext: (invoices: Invoice[]) => void,
+  onError?: (error: Error) => void,
 ): () => void {
   const q = query(
     collection(db, 'invoices'),
@@ -99,10 +100,28 @@ export function subscribeInvoices(
     orderBy('createdAt', 'desc'),
   );
 
-  const unsubscribe = onSnapshot(q, (snapshot) => {
-    const invoices = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Invoice);
-    callback(invoices);
-  });
+  let isFirstSnapshot = true;
+
+  const unsubscribe = onSnapshot(
+    q,
+    { includeMetadataChanges: true },
+    (snapshot) => {
+      if (isFirstSnapshot) {
+        isFirstSnapshot = false;
+        const invoices = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Invoice);
+        onNext(invoices);
+        return;
+      }
+
+      if (snapshot.metadata.fromCache) return;
+
+      const invoices = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Invoice);
+      onNext(invoices);
+    },
+    (error) => {
+      onError?.(error);
+    },
+  );
 
   return unsubscribe;
 }

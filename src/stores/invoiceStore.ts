@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import * as api from '../api/invoice';
+import * as api from '../api';
 import type { Invoice, CreateInvoicePayload, InvoiceStatus } from '../types';
 
 export type SortField = 'createdAt' | 'dueDate' | 'total';
@@ -22,10 +22,17 @@ export const useInvoiceStore = defineStore('invoice', () => {
   function startListening(userId: string) {
     stopListening();
     loading.value = true;
-    unsubscribe = api.subscribeInvoices(userId, (data) => {
-      invoices.value = data;
-      loading.value = false;
-    });
+    unsubscribe = api.subscribeInvoices(
+      userId,
+      (data) => {
+        invoices.value = data;
+        loading.value = false;
+      },
+      (error) => {
+        console.error('Invoice subscription error:', error);
+        loading.value = false;
+      },
+    );
   }
 
   function stopListening() {

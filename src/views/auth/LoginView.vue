@@ -167,7 +167,7 @@ async function handleLogin() {
   errorMsg.value = '';
   try {
     await authStore.login(email.value.trim(), password.value);
-    router.push('/invoices');
+    router.push('/dashboard');
   } catch (e: unknown) {
     const err = e as { code?: string; message?: string };
     const code = err.code;

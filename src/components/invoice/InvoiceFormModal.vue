@@ -1,9 +1,13 @@
 <template>
-  <div class="form-page">
-    <div class="page-header">
-      <span class="page-title">{{ isEdit ? '编辑发票' : '创建发票' }}</span>
-    </div>
-
+  <n-modal
+    :show="show"
+    @update:show="$emit('update:show', $event)"
+    preset="card"
+    :title="isEdit ? '编辑发票' : '创建发票'"
+    style="max-width: 900px; width: 100%;"
+    :mask-closable="false"
+    :segmented="{ content: true }"
+  >
     <n-spin :show="pageLoading">
       <div class="form-body">
         <!-- 左栏 -->
@@ -135,16 +139,15 @@
         </div>
       </div>
     </n-spin>
-  </div>
+  </n-modal>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { ref, reactive, computed, watch, h } from 'vue';
 import { useMessage } from 'naive-ui';
-import { h } from 'vue';
 import type { Component } from 'vue';
 import {
+  NAlert,
   NButton,
   NDataTable,
   NDatePicker,
@@ -155,9 +158,9 @@ import {
   NIcon,
   NInput,
   NInputNumber,
+  NModal,
   NSelect,
   NSpin,
-  NAlert,
 } from 'naive-ui';
 import type { DataTableColumns, SelectOption } from 'naive-ui';
 import { DeleteOutlined, PlusOutlined } from '@vicons/antd';
@@ -166,12 +169,22 @@ import { getCurrentUser } from '../../api';
 import { Timestamp } from 'firebase/firestore';
 import type { InvoiceStatus, Item } from '../../types';
 
-const route = useRoute();
-const router = useRouter();
+const props = withDefaults(
+  defineProps<{
+    show: boolean;
+    invoiceId: string | null;
+  }>(),
+  { invoiceId: null },
+);
+
+const emit = defineEmits<{
+  'update:show': [value: boolean];
+}>();
+
 const message = useMessage();
 const store = useInvoiceStore();
 
-const isEdit = computed(() => !!route.params.id);
+const isEdit = computed(() => !!props.invoiceId);
 const currencySymbol = '¥';
 
 const currencyOptions: SelectOption[] = [
@@ -187,12 +200,7 @@ interface ItemForm {
 }
 
 interface FormData {
-  client: {
-    name: string;
-    email: string;
-    address: string;
-    phone: string;
-  };
+  client: { name: string; email: string; address: string; phone: string };
   items: ItemForm[];
   taxRate: number;
   currency: 'CNY' | 'USD' | 'EUR';
@@ -219,7 +227,6 @@ const pageLoading = ref(false);
 const submitting = ref(false);
 const submitError = ref('');
 
-// Computed amounts
 const subtotal = computed(() =>
   form.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0),
 );
@@ -230,39 +237,61 @@ function formatMoney(amount: number): string {
   return `${currencySymbol} ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-// Edit mode: load existing invoice
-onMounted(async () => {
-  if (!isEdit.value) return;
+function resetForm() {
+  form.client = { name: '', email: '', address: '', phone: '' };
+  form.items = [{ description: '', quantity: 1, unitPrice: 0 }];
+  form.taxRate = 0;
+  form.currency = 'CNY';
+  form.dueDate = null;
+  form.notes = '';
+  errors.clientName = '';
+  errors.clientEmail = '';
+  errors.dueDate = '';
+  submitError.value = '';
+}
 
-  pageLoading.value = true;
-  try {
-    await store.fetchInvoiceById(route.params.id as string);
-    const inv = store.currentInvoice;
-    if (!inv) {
-      message.error('发票不存在');
-      router.push('/invoices');
-      return;
+watch(
+  () => props.show,
+  async (val) => {
+    if (!val) return;
+    resetForm();
+
+    if (!isEdit.value) return;
+
+    pageLoading.value = true;
+    try {
+      await store.fetchInvoiceById(props.invoiceId!);
+      const inv = store.currentInvoice;
+      if (!inv) {
+        message.error('发票不存在');
+        close();
+        return;
+      }
+      form.client.name = inv.client.name;
+      form.client.email = inv.client.email;
+      form.client.address = inv.client.address || '';
+      form.client.phone = inv.client.phone || '';
+      form.items = inv.items.map((item: Item) => ({
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+      }));
+      form.taxRate = inv.taxRate;
+      form.currency = inv.currency;
+      form.dueDate = inv.dueDate?.toDate?.()?.getTime() ?? null;
+      form.notes = inv.notes || '';
+    } catch {
+      message.error('加载发票失败');
+      close();
+    } finally {
+      pageLoading.value = false;
     }
-    form.client.name = inv.client.name;
-    form.client.email = inv.client.email;
-    form.client.address = inv.client.address || '';
-    form.client.phone = inv.client.phone || '';
-    form.items = inv.items.map((item: Item) => ({
-      description: item.description,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice,
-    }));
-    form.taxRate = inv.taxRate;
-    form.currency = inv.currency;
-    form.dueDate = inv.dueDate?.toDate?.()?.getTime() ?? null;
-    form.notes = inv.notes || '';
-  } catch {
-    message.error('加载发票失败');
-    router.push('/invoices');
-  } finally {
-    pageLoading.value = false;
-  }
-});
+  },
+);
+
+function close() {
+  emit('update:show', false);
+}
 
 function addItem() {
   form.items.push({ description: '', quantity: 1, unitPrice: 0 });
@@ -328,7 +357,7 @@ async function submit(status: InvoiceStatus) {
 
   try {
     if (isEdit.value) {
-      await store.updateInvoice(route.params.id as string, {
+      await store.updateInvoice(props.invoiceId!, {
         client: form.client,
         items,
         taxRate: form.taxRate,
@@ -338,7 +367,6 @@ async function submit(status: InvoiceStatus) {
         status,
       } as any);
       message.success('发票已更新');
-      router.push(`/invoices/${route.params.id}`);
     } else {
       await store.createInvoice({
         userId: fbUser.uid,
@@ -355,8 +383,8 @@ async function submit(status: InvoiceStatus) {
         dueDate: Timestamp.fromDate(new Date(form.dueDate!)),
       });
       message.success('发票已创建');
-      router.push('/invoices');
     }
+    close();
   } catch (e: unknown) {
     const err = e as { message?: string };
     submitError.value = err.message || '操作失败，请稍后重试';
@@ -365,7 +393,6 @@ async function submit(status: InvoiceStatus) {
   }
 }
 
-// Table columns for items
 function renderIcon(icon: Component) {
   return () => h(NIcon, null, { default: () => h(icon) });
 }
@@ -446,19 +473,6 @@ const itemColumns: DataTableColumns<ItemForm> = [
 </script>
 
 <style scoped>
-.form-page {
-  padding: 24px;
-}
-
-.page-header {
-  margin-bottom: 24px;
-}
-
-.page-title {
-  font-size: 24px;
-  font-weight: 700;
-}
-
 .form-body {
   display: flex;
   gap: 24px;
