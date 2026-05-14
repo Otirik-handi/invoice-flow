@@ -30,6 +30,11 @@
       </div>
       <div class="sidebar-footer">
         <n-divider style="margin: 0" />
+        <div class="sidebar-action" :class="{ collapsed }" @click="themeStore.toggle()">
+          <n-icon :component="themeStore.isDark ? BulbOutlined : BulbFilled" size="18" />
+          <span v-show="!collapsed">{{ themeStore.isDark ? '亮色模式' : '暗色模式' }}</span>
+        </div>
+        <n-divider style="margin: 0" />
         <div class="logout-item" :class="{ collapsed }" @click="handleMenuSelect('logout')">
           <n-icon :component="LogoutOutlined" size="18" />
           <span v-show="!collapsed">退出登录</span>
@@ -62,6 +67,7 @@ import { h, computed, ref } from 'vue';
 import type { Component } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '../../stores/authStore';
+import { useThemeStore } from '../../stores/themeStore';
 import {
   NLayout,
   NLayoutContent,
@@ -83,6 +89,8 @@ import {
   TeamOutlined,
   SettingOutlined,
   LogoutOutlined,
+  BulbFilled,
+  BulbOutlined,
 } from '@vicons/antd';
 
 const router = useRouter();
@@ -90,6 +98,7 @@ const route = useRoute();
 const dialog = useDialog();
 const collapsed = ref(false);
 const authStore = useAuthStore();
+const themeStore = useThemeStore();
 const user = authStore.user;
 const avatarChar = computed(() => user?.displayName?.charAt(0) || 'U');
 
@@ -169,6 +178,7 @@ function handleMenuSelect(key: string) {
   border-top: 1px solid var(--color-border, #e5e7eb);
 }
 
+.sidebar-action,
 .logout-item {
   display: flex;
   align-items: center;
@@ -182,11 +192,17 @@ function handleMenuSelect(key: string) {
     color 0.2s;
 }
 
+.sidebar-action:hover {
+  background-color: var(--color-primary-lighter, rgba(79, 70, 229, 0.08));
+  color: var(--color-primary, #4f46e5);
+}
+
 .logout-item:hover {
   background-color: var(--color-primary-lighter, rgba(79, 70, 229, 0.08));
   color: var(--color-error, #dc2626);
 }
 
+.sidebar-action.collapsed,
 .logout-item.collapsed {
   justify-content: center;
   padding: 12px 0;

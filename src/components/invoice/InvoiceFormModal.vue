@@ -496,10 +496,10 @@ const itemColumns: DataTableColumns<ItemForm> = [
 .section-title {
   font-size: 16px;
   font-weight: 600;
-  color: #374151;
+  color: var(--color-text);
   margin-bottom: 16px;
   padding-bottom: 8px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .add-row-btn {
@@ -507,8 +507,8 @@ const itemColumns: DataTableColumns<ItemForm> = [
 }
 
 .summary-card {
-  background: #fff;
-  border: 1px solid #e5e7eb;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
   border-radius: 12px;
   padding: 20px;
   margin-bottom: 24px;
@@ -528,12 +528,12 @@ const itemColumns: DataTableColumns<ItemForm> = [
 
 .summary-label {
   font-size: 14px;
-  color: #6b7280;
+  color: var(--color-text-secondary);
 }
 
 .summary-value {
   font-size: 14px;
-  color: #1f2937;
+  color: var(--color-text);
 }
 
 .summary-row.total {

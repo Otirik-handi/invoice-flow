@@ -313,13 +313,13 @@ const itemColumns: DataTableColumns<Invoice['items'][0]> = [
 .invoice-title {
   font-size: 24px;
   font-weight: 700;
-  color: #1f2937;
+  color: var(--color-text);
 }
 
 .invoice-number {
   margin-top: 4px;
   font-size: 14px;
-  color: #6b7280;
+  color: var(--color-text-secondary);
 }
 
 .info-grid {
@@ -330,19 +330,19 @@ const itemColumns: DataTableColumns<Invoice['items'][0]> = [
 
 .info-label {
   font-size: 12px;
-  color: #9ca3af;
+  color: var(--color-text-tertiary);
   margin-bottom: 2px;
 }
 
 .info-value {
   font-size: 14px;
-  color: #1f2937;
+  color: var(--color-text);
 }
 
 .section-title {
   font-size: 14px;
   font-weight: 600;
-  color: #374151;
+  color: var(--color-text);
   margin-bottom: 12px;
 }
 
@@ -360,12 +360,12 @@ const itemColumns: DataTableColumns<Invoice['items'][0]> = [
 
 .amount-label {
   font-size: 14px;
-  color: #6b7280;
+  color: var(--color-text-secondary);
 }
 
 .amount-value {
   font-size: 14px;
-  color: #1f2937;
+  color: var(--color-text);
 }
 
 .amount-row.total {
@@ -375,12 +375,12 @@ const itemColumns: DataTableColumns<Invoice['items'][0]> = [
 .total-value {
   font-size: 20px;
   font-weight: 700;
-  color: #1f2937;
+  color: var(--color-text);
 }
 
 .notes-content {
   font-size: 14px;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   white-space: pre-wrap;
 }
 </style>

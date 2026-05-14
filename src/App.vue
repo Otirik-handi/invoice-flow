@@ -1,5 +1,5 @@
 <template>
-  <n-config-provider :theme-overrides="themeOverrides">
+  <n-config-provider :theme="themeStore.isDark ? darkTheme : null" :theme-overrides="themeOverrides">
     <n-loading-bar-provider>
       <n-message-provider>
         <n-notification-provider>
@@ -15,9 +15,11 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { onMounted, watch, computed } from 'vue';
 import { useAuthStore } from './stores/authStore';
-import { themeOverrides, cssVars } from './theme';
+import { useThemeStore } from './stores/themeStore';
+import { lightThemeOverrides, darkThemeOverrides, getCssVars } from './theme';
+import { darkTheme } from 'naive-ui';
 import {
   NConfigProvider,
   NLoadingBarProvider,
@@ -28,12 +30,24 @@ import {
 } from 'naive-ui';
 
 const authStore = useAuthStore();
+const themeStore = useThemeStore();
 authStore.init();
 
-onMounted(() => {
+const themeOverrides = computed(() =>
+  themeStore.isDark ? darkThemeOverrides : lightThemeOverrides,
+);
+
+function applyCssVars(isDark: boolean) {
+  const vars = getCssVars(isDark);
   const root = document.documentElement;
-  Object.entries(cssVars).forEach(([key, val]) => {
+  Object.entries(vars).forEach(([key, val]) => {
     root.style.setProperty(key, val);
   });
+}
+
+onMounted(() => {
+  applyCssVars(themeStore.isDark);
 });
+
+watch(() => themeStore.isDark, applyCssVars);
 </script>

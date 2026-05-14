@@ -74,8 +74,9 @@
 </template>
 
 <script setup lang="ts">
-import { h, ref, onMounted, onUnmounted, computed } from 'vue';
+import { h, ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import { useThemeStore } from '../stores/themeStore';
 import * as echarts from 'echarts';
 import { NGrid, NGridItem, NCard, NIcon, NSpace, NButton, NDataTable, NTag, NSpin } from 'naive-ui';
 import type { DataTableColumns } from 'naive-ui';
@@ -98,6 +99,7 @@ import {
 import type { Invoice } from '../types';
 
 const router = useRouter();
+const themeStore = useThemeStore();
 
 const loading = ref(true);
 const invoices = ref<Invoice[]>([]);
@@ -166,8 +168,20 @@ const statusChartRef = ref<HTMLDivElement | null>(null);
 let revenueChart: echarts.ECharts | null = null;
 let statusChart: echarts.ECharts | null = null;
 
+function getChartColors(isDark: boolean) {
+  return {
+    axisLabel: isDark ? '#9ca3af' : '#909399',
+    splitLine: isDark ? '#363649' : '#f0f2f5',
+    barGradientFrom: isDark ? '#818cf8' : '#4f46e5',
+    barGradientTo: isDark ? '#a5b4fc' : '#818cf8',
+    pieLabel: isDark ? '#a1a1aa' : '#606266',
+  };
+}
+
 function renderCharts() {
   if (!revenueChartRef.value || !statusChartRef.value || !invoices.value.length) return;
+
+  const colors = getChartColors(themeStore.isDark);
 
   // Revenue bar chart
   const rev = monthlyRevenue.value;
@@ -178,17 +192,17 @@ function renderCharts() {
     xAxis: {
       type: 'category',
       data: rev.map((r) => r.label),
-      axisLabel: { fontSize: 11, color: '#909399' },
+      axisLabel: { fontSize: 11, color: colors.axisLabel },
       axisLine: { show: false },
       axisTick: { show: false },
     },
     yAxis: {
       type: 'value',
       min: 0,
-      splitLine: { lineStyle: { color: '#f0f2f5' } },
+      splitLine: { lineStyle: { color: colors.splitLine } },
       axisLabel: {
         fontSize: 11,
-        color: '#909399',
+        color: colors.axisLabel,
         formatter: (v: number) => (v / 1000).toFixed(0) + 'k',
       },
     },
@@ -199,8 +213,8 @@ function renderCharts() {
         barWidth: 36,
         itemStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: '#4f46e5' },
-            { offset: 1, color: '#818cf8' },
+            { offset: 0, color: colors.barGradientFrom },
+            { offset: 1, color: colors.barGradientTo },
           ]),
           borderRadius: [4, 4, 0, 0],
         },
@@ -218,7 +232,7 @@ function renderCharts() {
         type: 'pie',
         radius: ['45%', '70%'],
         avoidLabelOverlap: true,
-        label: { show: true, formatter: '{b}\n{d}%', fontSize: 11, color: '#606266' },
+        label: { show: true, formatter: '{b}\n{d}%', fontSize: 11, color: colors.pieLabel },
         emphasis: { label: { show: true, fontWeight: 'bold' } },
         data: dist.map((d) => ({ value: d.count, name: d.label, itemStyle: { color: d.color } })),
       },
@@ -246,6 +260,17 @@ onMounted(async () => {
   }
 });
 
+watch(
+  () => themeStore.isDark,
+  () => {
+    revenueChart?.dispose();
+    statusChart?.dispose();
+    revenueChart = null;
+    statusChart = null;
+    setTimeout(renderCharts, 0);
+  },
+);
+
 onUnmounted(() => {
   revenueChart?.dispose();
   statusChart?.dispose();
@@ -269,7 +294,7 @@ onUnmounted(() => {
 
 .page-desc {
   font-size: 14px;
-  color: #909399;
+  color: var(--color-text-secondary);
   margin-top: 4px;
 }
 
@@ -303,7 +328,7 @@ onUnmounted(() => {
 
 .stat-label {
   font-size: 13px;
-  color: #909399;
+  color: var(--color-text-secondary);
   margin-top: 2px;
 }
 

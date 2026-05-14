@@ -262,7 +262,7 @@ async function handleLogin() {
   flex: 1;
   height: 100%;
   padding: 2.5rem 5rem;
-  background-color: #fff;
+  background-color: var(--color-bg);
   border-top-right-radius: var(--radius-xl);
   border-bottom-right-radius: var(--radius-xl);
 }
