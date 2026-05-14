@@ -1,0 +1,23 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 用户数据 — 仅本人可读写
+    match /users/{docId} {
+      allow read, update, delete: if request.auth != null && request.auth.uid == docId;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.uid;
+    }
+
+    // 发票 — 仅本人可读写
+    match /invoices/{docId} {
+      allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+    }
+
+    // 客户 — 仅本人可读写
+    match /clients/{docId} {
+      allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+    }
+  }
+}

@@ -5,7 +5,7 @@
 import { type User } from '../types';
 import { auth, db } from './firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 
 async function registerUser(
@@ -71,4 +71,11 @@ function getCurrentUser(): Promise<{ uid: string } | null> {
   });
 }
 
-export { registerUser, loginUser, logoutUser, fetchUserDoc, getCurrentUser };
+async function updateUserDoc(
+  uid: string,
+  data: Partial<Pick<User, 'displayName' | 'companyName' | 'address' | 'phone' | 'defaultTaxRate' | 'defaultCurrency' | 'defaultDueDays'>>,
+): Promise<void> {
+  await updateDoc(doc(db, 'users', uid), data);
+}
+
+export { registerUser, loginUser, logoutUser, fetchUserDoc, getCurrentUser, updateUserDoc };

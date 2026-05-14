@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../api/firebase';
-import { registerUser, loginUser, logoutUser, fetchUserDoc } from '../api';
+import { registerUser, loginUser, logoutUser, fetchUserDoc, updateUserDoc } from '../api';
 import type { User } from '../types';
 
 export const useAuthStore = defineStore('auth', () => {
@@ -61,5 +61,13 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null;
   }
 
-  return { user, loading, init, cleanup, waitForUser, login, register, logout };
+  async function updateProfile(
+    data: Parameters<typeof updateUserDoc>[1],
+  ): Promise<void> {
+    if (!user.value) throw new Error('用户未登录');
+    await updateUserDoc(user.value.uid, data);
+    Object.assign(user.value, data);
+  }
+
+  return { user, loading, init, cleanup, waitForUser, login, register, logout, updateProfile };
 });
